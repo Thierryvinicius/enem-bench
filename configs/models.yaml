@@ -1,37 +1,71 @@
-
 models:
   qwen2.5-0.5b:
     hf_id: Qwen/Qwen2.5-0.5B-Instruct
+    tipo: instruct
     quant: none
-    chat: true
+    group: multilingual
+  qwen2.5-0.5b-base:
+    hf_id: Qwen/Qwen2.5-0.5B
+    tipo: base
+    quant: none
     group: multilingual
   qwen2.5-1.5b:
     hf_id: Qwen/Qwen2.5-1.5B-Instruct
+    tipo: instruct
     quant: none
-    chat: true
+    group: multilingual
+  qwen2.5-1.5b-base:
+    hf_id: Qwen/Qwen2.5-1.5B
+    tipo: base
+    quant: none
     group: multilingual
   qwen2.5-3b:
     hf_id: Qwen/Qwen2.5-3B-Instruct
+    tipo: instruct
     quant: 4bit
-    chat: true
+    group: multilingual
+  qwen2.5-3b-base:
+    hf_id: Qwen/Qwen2.5-3B
+    tipo: base
+    quant: 4bit
     group: multilingual
   qwen3-1.7b:
     hf_id: Qwen/Qwen3-1.7B
+    tipo: instruct
     quant: none
-    chat: true
+    group: multilingual
+  qwen3-1.7b-base:
+    hf_id: Qwen/Qwen3-1.7B-Base
+    tipo: base
+    quant: none
     group: multilingual
   qwen3-4b:
     hf_id: Qwen/Qwen3-4B
+    tipo: instruct
     quant: 4bit
-    chat: true
+    group: multilingual
+  qwen3-4b-base:
+    hf_id: Qwen/Qwen3-4B-Base
+    tipo: base
+    quant: 4bit
     group: multilingual
   tucano-1b1:
     hf_id: TucanoBR/Tucano-1b1-Instruct
+    tipo: instruct
     quant: none
-    chat: true
+    group: br
+  tucano-1b1-base:
+    hf_id: TucanoBR/Tucano-1b1
+    tipo: base
+    quant: none
     group: br
   tucano-2b4:
     hf_id: TucanoBR/Tucano-2b4-Instruct
+    tipo: instruct
     quant: 4bit
-    chat: true
+    group: br
+  tucano-2b4-base:
+    hf_id: TucanoBR/Tucano-2b4
+    tipo: base
+    quant: 4bit
     group: br
