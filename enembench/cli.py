@@ -16,7 +16,7 @@ def main() -> None:
     ap.add_argument("--listar", action="store_true", help="lista modelos registrados e sai")
     ap.add_argument("--modelos", nargs="+", help="nomes em configs/models.yaml, ou 'all'")
     ap.add_argument("--grupo", help="filtra modelos por grupo (ex.: br)")
-    ap.add_argument("--dados", default="data/enem2026.jsonl")
+    ap.add_argument("--dados", nargs="+", default=["data/enem2024.jsonl"])
     ap.add_argument("--areas", nargs="+", help="linguagens humanas natureza matematica")
     ap.add_argument("--limite", type=int, help="subamostra N questões (reprodutível via --seed)")
     ap.add_argument("--shots", type=int, default=0, help="exemplos few-shot (tirados do próprio set, excluídos da avaliação)")
@@ -55,7 +55,7 @@ def main() -> None:
 
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["modelo", "grupo", "id", "area", "gabarito", "predicao", "acerto", "segundos"])
+        w.writerow(["modelo", "grupo", "id", "area", "gabarito", "predicao", "acerto", "tem_imagem", "segundos"])
         for nome in nomes:
             cfg = registro[nome]
             print(f"\n== {nome} ({cfg.hf_id}) ==")
@@ -79,7 +79,7 @@ def main() -> None:
                     pred = ""
                 ok = pred == q.gabarito
                 acertos += ok
-                w.writerow([nome, cfg.group, q.id, q.area, q.gabarito, pred, int(ok), f"{time.time()-t0:.2f}"])
+                w.writerow([nome, cfg.group, q.id, q.area, q.gabarito, pred, int(ok), int(q.tem_imagem), f"{time.time()-t0:.2f}"])
                 f.flush()
                 if i % 10 == 0 or i == len(avaliar):
                     print(f"  {i}/{len(avaliar)}  acc={acertos/i:.1%}")

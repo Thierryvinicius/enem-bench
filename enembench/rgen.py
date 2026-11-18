@@ -39,6 +39,8 @@ p2 <- ggplot(area, aes(area, modelo, fill = acuracia)) +
   labs(x = NULL, y = NULL, fill = "Acurácia", title = "Acurácia por área") +
   theme_minimal()
 ggsave(file.path(dir_run, "acuracia_area.png"), p2, width = 8, height = 5, dpi = 150)
+imagem <- d |> group_by(modelo, tem_imagem) |> summarise(acuracia = mean(acerto), n = n(), .groups = "drop")
+write_csv(imagem, file.path(dir_run, "acuracia_imagem.csv"))
 w <- d |> select(id, modelo, acerto) |> pivot_wider(names_from = modelo, values_from = acerto)
 mods <- setdiff(names(w), "id")
 if (length(mods) >= 2) {{

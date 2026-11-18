@@ -1,5 +1,5 @@
 .venv/
 __pycache__/
 results/
-data/enem2026.jsonl
+data/enem*.jsonl
 *.pyc

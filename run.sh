@@ -18,10 +18,10 @@ read -rp "Áreas (linguagens humanas natureza matematica; vazio = todas): " AREA
 read -rp "Limite de questões (vazio = todas): " LIMITE
 read -rp "Few-shot [0]: " SHOTS
 SHOTS=${SHOTS:-0}
-read -rp "Dataset [data/enem2026.jsonl]: " DADOS
-DADOS=${DADOS:-data/enem2026.jsonl}
+read -rp "Dataset(s) [data/enem2024.jsonl]: " DADOS
+DADOS=${DADOS:-data/enem2024.jsonl}
 
-ARGS=(--modelos $MODELOS --shots "$SHOTS" --dados "$DADOS")
+ARGS=(--modelos $MODELOS --shots "$SHOTS" --dados $DADOS)
 [ -n "$AREAS" ]  && ARGS+=(--areas $AREAS)
 [ -n "$LIMITE" ] && ARGS+=(--limite "$LIMITE")
 
