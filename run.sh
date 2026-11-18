@@ -28,7 +28,7 @@ ARGS=(--modelos $MODELOS --shots "$SHOTS" --dados $DADOS)
 "$PY" -m src.cli "${ARGS[@]}"
 ULTIMO=$(ls -1d results/*/ | tail -1)
 if command -v Rscript >/dev/null; then
-  Rscript "${ULTIMO}analise.R"
+  Rscript analysis/analise.R "$ULTIMO"
 else
-  echo "Rscript não encontrado; rode depois: Rscript ${ULTIMO}analise.R"
+  echo "Rscript não encontrado; rode depois: Rscript analysis/analise.R $ULTIMO"
 fi
