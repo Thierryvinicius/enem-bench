@@ -6,6 +6,8 @@ import re
 import urllib.request
 from pathlib import Path
 
+from .. import config
+
 URL = "https://huggingface.co/datasets/maritaca-ai/enem/resolve/main/{ano}.jsonl"
 PLACEHOLDER = "[[placeholder]]"
 LETRAS = "ABCDE"
@@ -65,8 +67,9 @@ def baixar(ano: str, destino: Path) -> Path:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Baixa o dataset maritaca-ai/enem e converte para o formato do enem-bench")
-    ap.add_argument("--anos", nargs="+", default=["2022", "2023", "2024"])
-    ap.add_argument("--destino", default="data")
+    padrao = config.carregar()["prepare"]
+    ap.add_argument("--anos", nargs="+", default=padrao["anos"])
+    ap.add_argument("--destino", default=padrao["destino"])
     args = ap.parse_args()
     for ano in args.anos:
         baixar(ano, Path(args.destino))

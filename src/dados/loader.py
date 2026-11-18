@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import random
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,8 +18,6 @@ class Questao:
 def carregar(
     caminhos: list[str | Path],
     areas: list[str] | None = None,
-    limite: int | None = None,
-    seed: int = 0,
     incluir_imagens: bool = False,
 ) -> list[Questao]:
     questoes: list[Questao] = []
@@ -36,7 +33,4 @@ def carregar(
                 if areas and q.area not in areas:
                     continue
                 questoes.append(q)
-    if limite is not None and limite < len(questoes):
-        random.Random(seed).shuffle(questoes)
-        questoes = questoes[:limite]
     return questoes
