@@ -4,10 +4,10 @@ from pathlib import Path
 
 import yaml
 
-RAIZ = Path(__file__).resolve().parent.parent
-CONFIG_PADRAO = RAIZ / "configs" / "config.yaml"
+ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_CONFIG = ROOT / "configs" / "config.yaml"
 
 
-def carregar(caminho: str | Path = CONFIG_PADRAO) -> dict:
-    with open(caminho, encoding="utf-8") as f:
+def load(path: str | Path = DEFAULT_CONFIG) -> dict:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)

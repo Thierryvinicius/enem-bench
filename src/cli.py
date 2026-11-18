@@ -6,63 +6,63 @@ from datetime import datetime
 from pathlib import Path
 
 from . import config, runner
-from .dados import loader
-from .modelos import registry
+from .data import loader
+from .models import registry as model_registry
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Benchmark de LLMs no ENEM")
-    ap.add_argument("--config", default=str(config.CONFIG_PADRAO))
-    ap.add_argument("--listar", action="store_true", help="lista modelos registrados e sai")
-    ap.add_argument("--modelos", nargs="+", help="nomes em configs/models.yaml, ou 'all'")
-    ap.add_argument("--grupo", help="filtra por grupo (ex.: br)")
-    ap.add_argument("--tipo", choices=["base", "instruct"], help="filtra por tipo de modelo")
-    ap.add_argument("--dados", nargs="+")
-    ap.add_argument("--areas", nargs="+")
-    ap.add_argument("--limite", type=int)
-    ap.add_argument("--shots", type=int)
-    ap.add_argument("--quant", choices=["none", "8bit", "4bit"])
+    ap = argparse.ArgumentParser(description="Benchmark small LLMs on the ENEM exam")
+    ap.add_argument("--config", default=str(config.DEFAULT_CONFIG))
+    ap.add_argument("--list", action="store_true", help="list registered models and exit")
+    ap.add_argument("--models", nargs="+", help="names from configs/models.yaml, or 'all'")
+    ap.add_argument("--group", help="only models in this group (e.g. br)")
+    ap.add_argument("--type", choices=["base", "instruct"], help="only models of this type")
+    ap.add_argument("--data", nargs="+", help="one or more JSONL question files")
+    ap.add_argument("--areas", nargs="+", help="languages humanities natural_sciences mathematics")
+    ap.add_argument("--limit", type=int, help="sample N questions (reproducible with --seed)")
+    ap.add_argument("--shots", type=int, help="few-shot examples taken from the dataset itself")
+    ap.add_argument("--quant", choices=["none", "8bit", "4bit"], help="override quantization for all models")
     ap.add_argument("--seed", type=int)
-    ap.add_argument("--saida")
+    ap.add_argument("--output")
     args = ap.parse_args()
 
-    cfg = config.carregar(args.config)
-    for chave in ("dados", "areas", "limite", "shots", "quant", "seed", "saida"):
-        valor = getattr(args, chave)
-        if valor is not None:
-            cfg[chave] = valor
+    cfg = config.load(args.config)
+    for key in ("data", "areas", "limit", "shots", "quant", "seed", "output"):
+        value = getattr(args, key)
+        if value is not None:
+            cfg[key] = value
 
-    reg = registry.listar()
-    if args.listar:
-        for n, c in reg.items():
-            print(f"{n:20} {c.hf_id:36} {c.tipo:8} quant={c.quant:5} grupo={c.group}")
+    registry = model_registry.load_registry()
+    if args.list:
+        for name, c in registry.items():
+            print(f"{name:20} {c.hf_id:36} {c.type:8} quant={c.quant:5} group={c.group}")
         return
 
-    nomes = list(reg) if (args.modelos or ["all"]) == ["all"] else args.modelos
-    if args.grupo:
-        nomes = [n for n in nomes if reg[n].group == args.grupo]
-    if args.tipo:
-        nomes = [n for n in nomes if reg[n].tipo == args.tipo]
-    faltando = [n for n in nomes if n not in reg]
-    if faltando:
-        raise SystemExit(f"Modelos desconhecidos: {faltando}. Use --listar.")
-    if not nomes:
-        raise SystemExit("Nenhum modelo selecionado.")
+    names = list(registry) if (args.models or ["all"]) == ["all"] else args.models
+    unknown = [n for n in names if n not in registry]
+    if unknown:
+        raise SystemExit(f"Unknown models: {unknown}. Use --list.")
+    if args.group:
+        names = [n for n in names if registry[n].group == args.group]
+    if args.type:
+        names = [n for n in names if registry[n].type == args.type]
+    if not names:
+        raise SystemExit("No models selected.")
 
-    todas = loader.carregar(cfg["dados"], cfg["areas"])
+    pool = loader.load_questions(cfg["data"], cfg["areas"])
     rng = random.Random(cfg["seed"])
-    exemplos = rng.sample(todas, cfg["shots"]) if cfg["shots"] else []
-    ids_ex = {q.id for q in exemplos}
-    questoes = [q for q in todas if q.id not in ids_ex]
-    if cfg["limite"] and cfg["limite"] < len(questoes):
-        questoes = rng.sample(questoes, cfg["limite"])
-    print(f"{len(questoes)} questões, {len(nomes)} modelos, shots={cfg['shots']}")
+    examples = rng.sample(pool, cfg["shots"]) if cfg["shots"] else []
+    example_ids = {q.id for q in examples}
+    questions = [q for q in pool if q.id not in example_ids]
+    if cfg["limit"] and cfg["limit"] < len(questions):
+        questions = rng.sample(questions, cfg["limit"])
+    print(f"{len(questions)} questions, {len(names)} models, shots={cfg['shots']}")
 
-    dir_run = Path(cfg["saida"]) / datetime.now().strftime("%Y%m%d-%H%M%S")
-    dir_run.mkdir(parents=True, exist_ok=True)
-    csv_path = dir_run / "respostas.csv"
-    runner.avaliar(nomes, reg, questoes, exemplos, cfg["prompt"]["sistema"], cfg["quant"], csv_path)
-    print(f"\nResultados: {csv_path}\nAnálise:    Rscript analysis/analise.R {dir_run}")
+    run_dir = Path(cfg["output"]) / datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = run_dir / "answers.csv"
+    runner.evaluate(names, registry, questions, examples, cfg["prompt"]["system"], cfg["quant"], csv_path)
+    print(f"\nResults:  {csv_path}\nAnalysis: Rscript analysis/analysis.R {run_dir}")
 
 
 if __name__ == "__main__":

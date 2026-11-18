@@ -1,17 +1,17 @@
-dados:
+data:
   - data/enem2024.jsonl
 areas: null
-limite: null
+limit: null
 shots: 0
 seed: 0
 quant: null
-saida: results
+output: results
 
 prompt:
-  sistema: >-
+  system: >-
     Você é um estudante resolvendo uma questão do ENEM.
     Responda apenas com a letra da alternativa correta (A, B, C, D ou E).
 
 prepare:
-  anos: ["2022", "2023", "2024"]
-  destino: data
+  years: ["2022", "2023", "2024"]
+  dest: data

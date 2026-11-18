@@ -5,52 +5,52 @@ import time
 from pathlib import Path
 
 from . import prompts
-from .dados.loader import Questao
-from .modelos import hf
-from .modelos.registry import ModeloCfg
+from .data.loader import Question
+from .models.hf import HFModel
+from .models.registry import ModelCfg
 
-LETRAS = ["A", "B", "C", "D", "E"]
-COLUNAS = ["modelo", "grupo", "tipo", "id", "area", "gabarito", "predicao", "acerto", "tem_imagem", "segundos"]
+LETTERS = ["A", "B", "C", "D", "E"]
+COLUMNS = ["model", "group", "type", "id", "area", "answer", "prediction", "correct", "has_image", "seconds"]
 
 
-def avaliar(
-    nomes: list[str],
-    registro: dict[str, ModeloCfg],
-    questoes: list[Questao],
-    exemplos: list[Questao],
-    sistema: str,
+def evaluate(
+    names: list[str],
+    registry: dict[str, ModelCfg],
+    questions: list[Question],
+    examples: list[Question],
+    system: str,
     quant: str | None,
     csv_path: Path,
 ) -> None:
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(COLUNAS)
-        for nome in nomes:
-            cfg = registro[nome]
-            print(f"\n== {nome} ({cfg.hf_id}, {cfg.tipo}) ==")
+        writer = csv.writer(f)
+        writer.writerow(COLUMNS)
+        for name in names:
+            cfg = registry[name]
+            print(f"\n== {name} ({cfg.hf_id}, {cfg.type}) ==")
             try:
-                modelo = hf.Modelo(cfg, quant)
+                model = HFModel(cfg, quant)
             except Exception as e:
-                print(f"  falha ao carregar: {e}")
+                print(f"  failed to load: {e}")
                 continue
-            acertos = 0
-            for i, q in enumerate(questoes, 1):
-                letras = [l for l in LETRAS if l in q.alternativas]
-                t0 = time.time()
+            hits = 0
+            for i, q in enumerate(questions, 1):
+                letters = [l for l in LETTERS if l in q.choices]
+                start = time.time()
                 try:
-                    pred, _ = modelo.prever_letra(
-                        prompts.montar_mensagens(sistema, q, exemplos),
-                        prompts.montar_texto(sistema, q, exemplos),
-                        letras,
+                    pred, _ = model.predict_letter(
+                        prompts.build_messages(system, q, examples),
+                        prompts.build_text(system, q, examples),
+                        letters,
                     )
                 except Exception as e:
-                    print(f"  q {q.id}: erro {type(e).__name__}; contando como erro")
+                    print(f"  question {q.id}: {type(e).__name__}; counted as wrong")
                     pred = ""
-                ok = pred == q.gabarito
-                acertos += ok
-                w.writerow([nome, cfg.group, cfg.tipo, q.id, q.area, q.gabarito, pred,
-                            int(ok), int(q.tem_imagem), f"{time.time() - t0:.2f}"])
+                correct = pred == q.answer
+                hits += correct
+                writer.writerow([name, cfg.group, cfg.type, q.id, q.area, q.answer, pred,
+                                 int(correct), int(q.has_image), f"{time.time() - start:.2f}"])
                 f.flush()
-                if i % 10 == 0 or i == len(questoes):
-                    print(f"  {i}/{len(questoes)}  acc={acertos / i:.1%}")
-            modelo.liberar()
+                if i % 10 == 0 or i == len(questions):
+                    print(f"  {i}/{len(questions)}  acc={hits / i:.1%}")
+            model.release()
