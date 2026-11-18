@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import math
 import time
 from pathlib import Path
 
@@ -11,6 +12,14 @@ from .models.registry import ModelCfg
 
 LETTERS = ["A", "B", "C", "D", "E"]
 COLUMNS = ["model", "group", "type", "id", "area", "answer", "prediction", "correct", "has_image", "seconds"]
+PROB_COLUMNS = [f"prob_{l}" for l in LETTERS]
+
+
+def softmax(scores: dict[str, float]) -> dict[str, float]:
+    top = max(scores.values())
+    exps = {k: math.exp(v - top) for k, v in scores.items()}
+    total = sum(exps.values())
+    return {k: v / total for k, v in exps.items()}
 
 
 def evaluate(
@@ -24,7 +33,7 @@ def evaluate(
 ) -> None:
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(COLUMNS)
+        writer.writerow(COLUMNS + PROB_COLUMNS)
         for name in names:
             cfg = registry[name]
             print(f"\n== {name} ({cfg.hf_id}, {cfg.type}) ==")
@@ -38,18 +47,20 @@ def evaluate(
                 letters = [l for l in LETTERS if l in q.choices]
                 start = time.time()
                 try:
-                    pred, _ = model.predict_letter(
+                    pred, scores = model.predict_letter(
                         prompts.build_messages(system, q, examples),
                         prompts.build_text(system, q, examples),
                         letters,
                     )
                 except Exception as e:
                     print(f"  question {q.id}: {type(e).__name__}; counted as wrong")
-                    pred = ""
+                    pred, scores = "", {}
+                probs = softmax(scores) if scores else {}
                 correct = pred == q.answer
                 hits += correct
                 writer.writerow([name, cfg.group, cfg.type, q.id, q.area, q.answer, pred,
-                                 int(correct), int(q.has_image), f"{time.time() - start:.2f}"])
+                                 int(correct), int(q.has_image), f"{time.time() - start:.2f}"]
+                                + [f"{probs[l]:.6f}" if l in probs else "" for l in LETTERS])
                 f.flush()
                 if i % 10 == 0 or i == len(questions):
                     print(f"  {i}/{len(questions)}  acc={hits / i:.1%}")

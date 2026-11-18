@@ -78,14 +78,18 @@ notebooks/     colab.ipynb
 
 ### Output
 
-Each run creates `results/<timestamp>/` with `answers.csv` (model, group, type, id, area, answer, prediction, correct, has_image, seconds per question).
+Each run creates `results/<timestamp>/` with `answers.csv` (model, group, type, id, area, answer, prediction, correct, has_image, seconds per question, and the probabilities `prob_A`–`prob_E`, the softmax over the answer letters).
 
 For the analysis, run `Rscript analysis/analysis.R results/<timestamp>` (`run.sh` does it for you when R is installed). The script reads `answers.csv` and writes to the same folder:
 
 - `accuracy_overall.csv` and `accuracy_model.png`: accuracy per model with Wilson confidence intervals and the random-guess line (20%); base models are drawn lighter than instruct ones;
 - `accuracy_area.csv` and `accuracy_area.png`: accuracy per model and area;
 - `accuracy_image.csv`: accuracy on questions with and without images;
-- `mcnemar.csv`: paired McNemar test for every pair of models, with Holm correction.
+- `mcnemar.csv`: paired McNemar test for every pair of models, with Holm correction;
+- `vs_chance.csv` and `vs_chance_area.csv`: one-sided binomial test of each model against random guessing (20%), with Holm correction;
+- `effects.csv`: logistic regression with odds ratios for the effect of images (adjusted for model and area) and of base vs instruct (adjusted for area and image); `image_fisher.csv`: Fisher test with and without image per model;
+- `letter_bias.csv` and `letter_bias.png`: share of each predicted letter and a chi-square test against the answer key distribution;
+- `calibration_summary.csv`, `calibration_bins.csv` and `calibration.png`: Brier score, log-loss, expected calibration error and confidence when right vs wrong (only for runs that have the `prob_*` columns).
 
 R packages: `dplyr`, `ggplot2`, `readr`, `tidyr`, `scales`.
 
