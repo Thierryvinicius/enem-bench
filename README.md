@@ -15,6 +15,13 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+If PyTorch warns that your NVIDIA driver is too old, install a CUDA build that matches the driver (`nvidia-smi` shows the supported CUDA version) before the other requirements, for example for CUDA 12.4:
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu124
+pip install -r requirements.txt
+```
+
 Download and convert the dataset (2022, 2023 and 2024):
 
 ```bash

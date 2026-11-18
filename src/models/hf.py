@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import gc
 
+from jinja2.exceptions import TemplateError
+
 from .registry import ModelCfg
 
 
@@ -28,12 +30,20 @@ class HFModel:
         self.tokenizer = AutoTokenizer.from_pretrained(cfg.hf_id)
         self.model = AutoModelForCausalLM.from_pretrained(cfg.hf_id, **kwargs).eval()
 
+    def _apply_template(self, messages: list[dict]) -> str:
+        return self.tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+        )
+
     def _prompt(self, messages: list[dict], text: str) -> str:
-        if self.cfg.type == "instruct" and getattr(self.tokenizer, "chat_template", None):
-            return self.tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
-            )
-        return text
+        if self.cfg.type != "instruct" or not getattr(self.tokenizer, "chat_template", None):
+            return text
+        try:
+            return self._apply_template(messages)
+        except TemplateError:
+            system, rest = messages[0], list(messages[1:])
+            rest[0] = {"role": rest[0]["role"], "content": f"{system['content']}\n\n{rest[0]['content']}"}
+            return self._apply_template(rest)
 
     def predict_letter(self, messages: list[dict], text: str, letters: list[str]) -> tuple[str, dict]:
         inputs = self.tokenizer(self._prompt(messages, text), return_tensors="pt").to(self.model.device)
