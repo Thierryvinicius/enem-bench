@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-TEMPLATE = r'''# Gerado automaticamente por enembench em {quando}
+TEMPLATE = r'''# Gerado automaticamente por enem-bench em {quando}
 suppressPackageStartupMessages({{
   library(dplyr); library(ggplot2); library(readr); library(tidyr)
 }})

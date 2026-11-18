@@ -6,11 +6,11 @@ PY=${PYTHON:-python3}
 [ -d .venv ] && PY=.venv/bin/python
 
 if [ $# -gt 0 ]; then
-  exec "$PY" -m enembench.cli "$@"
+  exec "$PY" -m src.cli "$@"
 fi
 
 echo "Modelos registrados:"
-"$PY" -m enembench.cli --listar
+"$PY" -m src.cli --listar
 echo
 read -rp "Modelos (nomes separados por espaço, ou 'all') [qwen2.5-0.5b]: " MODELOS
 MODELOS=${MODELOS:-qwen2.5-0.5b}
@@ -25,7 +25,7 @@ ARGS=(--modelos $MODELOS --shots "$SHOTS" --dados $DADOS)
 [ -n "$AREAS" ]  && ARGS+=(--areas $AREAS)
 [ -n "$LIMITE" ] && ARGS+=(--limite "$LIMITE")
 
-"$PY" -m enembench.cli "${ARGS[@]}"
+"$PY" -m src.cli "${ARGS[@]}"
 ULTIMO=$(ls -1d results/*/ | tail -1)
 if command -v Rscript >/dev/null; then
   Rscript "${ULTIMO}analise.R"

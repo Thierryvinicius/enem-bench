@@ -16,7 +16,7 @@ pip install -r requirements.txt
 Baixe e converta o dataset (2022, 2023 e 2024):
 
 ```bash
-python -m enembench.prepare
+python -m src.prepare
 ```
 
 Menu interativo (escolhe modelos, áreas, limite de questões, few-shot e dataset):
@@ -65,7 +65,7 @@ Pacotes R necessários: `dplyr`, `ggplot2`, `readr`, `tidyr`, `scales`.
 
 ## Dataset
 
-Os dados vêm do [maritaca-ai/enem](https://huggingface.co/datasets/maritaca-ai/enem) (licença Apache-2.0), que reúne todas as questões objetivas do ENEM 2022, 2023 e 2024. Para as questões com imagem, o dataset inclui descrições em texto das figuras, extraídas do caderno de acessibilidade do ENEM, o que permite avaliar modelos só de texto. `python -m enembench.prepare` baixa os arquivos e os converte para o formato abaixo em `data/enem<ano>.jsonl`:
+Os dados vêm do [maritaca-ai/enem](https://huggingface.co/datasets/maritaca-ai/enem) (licença Apache-2.0), que reúne todas as questões objetivas do ENEM 2022, 2023 e 2024. Para as questões com imagem, o dataset inclui descrições em texto das figuras, extraídas do caderno de acessibilidade do ENEM, o que permite avaliar modelos só de texto. `python -m src.prepare` baixa os arquivos e os converte para o formato abaixo em `data/enem<ano>.jsonl`:
 
 - a área é derivada do número da questão (1–45 linguagens, 46–90 humanas, 91–135 natureza, 136–180 matemática);
 - o marcador de imagem do enunciado é substituído pela descrição textual e a questão fica com `tem_imagem: true`;
@@ -108,7 +108,7 @@ Um arquivo JSONL com uma questão por linha. Dá para usar qualquer dataset que 
 - `requer_imagem: true` marca questões que não podem ser respondidas só com texto; elas são ignoradas.
 - `tem_imagem: true` marca questões cuja figura foi substituída por descrição textual; serve para comparar o desempenho com e sem imagem.
 - `data/sample.jsonl` tem três questões fictícias, só para testar a instalação.
-- Os arquivos `data/enem*.jsonl` não são versionados; gere-os com `enembench.prepare`.
+- Os arquivos `data/enem*.jsonl` não são versionados; gere-os com `python -m src.prepare`.
 
 ## Como contribuir
 
