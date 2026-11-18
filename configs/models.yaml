@@ -1,0 +1,37 @@
+
+models:
+  qwen2.5-0.5b:
+    hf_id: Qwen/Qwen2.5-0.5B-Instruct
+    quant: none
+    chat: true
+    group: multilingual
+  qwen2.5-1.5b:
+    hf_id: Qwen/Qwen2.5-1.5B-Instruct
+    quant: none
+    chat: true
+    group: multilingual
+  qwen2.5-3b:
+    hf_id: Qwen/Qwen2.5-3B-Instruct
+    quant: 4bit
+    chat: true
+    group: multilingual
+  qwen3-1.7b:
+    hf_id: Qwen/Qwen3-1.7B
+    quant: none
+    chat: true
+    group: multilingual
+  qwen3-4b:
+    hf_id: Qwen/Qwen3-4B
+    quant: 4bit
+    chat: true
+    group: multilingual
+  tucano-1b1:
+    hf_id: TucanoBR/Tucano-1b1-Instruct
+    quant: none
+    chat: true
+    group: br
+  tucano-2b4:
+    hf_id: TucanoBR/Tucano-2b4-Instruct
+    quant: 4bit
+    chat: true
+    group: br
