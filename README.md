@@ -1,43 +1,129 @@
 # enem-bench
 
-Benchmark de LLMs pequenos (Qwen de poucos parâmetros, modelos brasileiros como Tucano) resolvendo as questões do ENEM 2026. Roda local (GTX 1650, 4 GB) ou no Colab. Ao final de cada execução gera um `analise.R` com tabelas, gráficos e testes estatísticos.
+Benchmark para comparar LLMs pequenos (Qwen, Tucano e outros) resolvendo as questões objetivas do ENEM. Os dados de 2022 a 2024 vêm do dataset [maritaca-ai/enem](https://huggingface.co/datasets/maritaca-ai/enem). Cada execução avalia os modelos escolhidos nas mesmas questões, salva uma linha por modelo e questão em CSV e gera um script R que produz as tabelas, os gráficos e os testes estatísticos.
 
-## Como funciona
+O modelo não escreve a resposta: o programa compara os logits das letras A–E no token seguinte ao prompt e escolhe a maior. Isso evita parsear texto livre e funciona bem mesmo em modelos fracos.
 
-1. `configs/models.yaml` — registro de modelos. Adicionar um modelo = adicionar 5 linhas.
-2. `enembench/` — carrega o dataset, monta o prompt, instancia o modelo e **pontua pela comparação dos logits das letras A–E** no próximo token (sem parsear texto livre, rápido, funciona bem em modelos fracos).
-3. `run.sh` — menu interativo (ou repassa flags direto ao CLI).
-4. `results/<timestamp>/` — `respostas.csv` (uma linha por modelo×questão) + `analise.R` gerado.
+## Como usar
 
-## Uso
+Requer Python 3.10+, uma GPU com CUDA (recomendado) e, opcionalmente, R para a análise.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-./run.sh                                   # menu interativo
-./run.sh --listar                          # modelos disponíveis
-./run.sh --modelos qwen2.5-0.5b tucano-1b1 --limite 50 --shots 3
-./run.sh --grupo br --areas matematica humanas
 ```
 
-Teste de fumaça sem o dataset real: `./run.sh --modelos qwen2.5-0.5b --dados data/sample.jsonl`.
+Baixe e converta o dataset (2022, 2023 e 2024):
 
-Flags: `--modelos`, `--grupo`, `--areas`, `--limite`, `--shots`, `--quant {none,8bit,4bit}`, `--seed`, `--dados`, `--saida`.
+```bash
+python -m enembench.prepare
+```
 
-## Dataset (você precisa montar)
+Menu interativo (escolhe modelos, áreas, limite de questões, few-shot e dataset):
 
-Coloque as questões em `data/enem2026.jsonl` (formato descrito em `enembench/data.py`; um exemplo em `data/sample.jsonl`). Fontes: PDFs de prova e gabarito no site do INEP. Questões com imagem ficam marcadas com `requer_imagem: true` e são puladas por padrão (modelos só-texto). Sugestão de próximo passo: script de extração PDF → JSONL.
+```bash
+./run.sh
+```
 
-## Notas de hardware (GTX 1650, 4 GB)
+Ou direto, repassando flags ao CLI:
 
-- fp16 cabe até ~1.5B parâmetros; acima disso use `quant: 4bit` (já configurado para 3B/4B/2.4B).
-- Enunciados longos do ENEM (textos-base) podem estourar memória em modelos de 3–4B; o erro é capturado e conta como erro (veja o log).
-- bitsandbytes na 1650 funciona, mas é lento; o Colab T4 é melhor para os maiores.
+```bash
+./run.sh --listar
+./run.sh --modelos qwen2.5-0.5b tucano-1b1 --limite 50 --shots 3
+./run.sh --grupo br --areas matematica humanas
+./run.sh --modelos qwen2.5-0.5b --dados data/sample.jsonl
+./run.sh --modelos qwen2.5-1.5b --dados data/enem2023.jsonl data/enem2024.jsonl
+```
 
-## Ideias para incrementar
+| Flag | Descrição |
+|---|---|
+| `--listar` | lista os modelos registrados e sai |
+| `--modelos` | nomes definidos em `configs/models.yaml`, ou `all` |
+| `--grupo` | filtra modelos por grupo (ex.: `br`, `multilingual`) |
+| `--dados` | um ou mais arquivos JSONL de questões (padrão `data/enem2024.jsonl`) |
+| `--areas` | `linguagens`, `humanas`, `natureza`, `matematica` |
+| `--limite` | sorteia N questões (reprodutível com `--seed`) |
+| `--shots` | número de exemplos few-shot, retirados do próprio dataset e excluídos da avaliação |
+| `--quant` | força `none`, `8bit` ou `4bit` em todos os modelos |
+| `--seed` | semente aleatória |
+| `--saida` | pasta de resultados (padrão `results`) |
 
-- Modelos maiores/novos (Sabiá via API, Llama, Gemma, Phi) — só entradas no YAML, ou um backend de API.
-- Modo `--modo gerar` com chain-of-thought e parsing da resposta.
-- Redação (exige juiz LLM ou rubrica) separada das objetivas.
-- Pontuação por TRI (aproximada) além da acurácia.
+O notebook `notebooks/colab.ipynb` roda o mesmo fluxo no Google Colab.
+
+### Saída
+
+Cada execução cria `results/<data-hora>/` com:
+
+- `respostas.csv`: modelo, grupo, id, área, gabarito, predição, acerto, se a questão tem imagem e tempo por questão.
+- `analise.R`: script gerado automaticamente. Ao rodá-lo (`Rscript results/<data-hora>/analise.R`, ou automaticamente pelo `run.sh` se o R estiver instalado) ele escreve na mesma pasta:
+  - `acuracia_geral.csv` e `acuracia_modelo.png`: acurácia por modelo com intervalo de confiança de Wilson e a linha do acaso (20%);
+  - `acuracia_area.csv` e `acuracia_area.png`: acurácia por modelo e área;
+  - `acuracia_imagem.csv`: acurácia em questões com e sem imagem;
+  - `mcnemar.csv`: teste de McNemar pareado entre todos os pares de modelos, com correção de Holm.
+
+Pacotes R necessários: `dplyr`, `ggplot2`, `readr`, `tidyr`, `scales`.
+
+## Dataset
+
+Os dados vêm do [maritaca-ai/enem](https://huggingface.co/datasets/maritaca-ai/enem) (licença Apache-2.0), que reúne todas as questões objetivas do ENEM 2022, 2023 e 2024. Para as questões com imagem, o dataset inclui descrições em texto das figuras, extraídas do caderno de acessibilidade do ENEM, o que permite avaliar modelos só de texto. `python -m enembench.prepare` baixa os arquivos e os converte para o formato abaixo em `data/enem<ano>.jsonl`:
+
+- a área é derivada do número da questão (1–45 linguagens, 46–90 humanas, 91–135 natureza, 136–180 matemática);
+- o marcador de imagem do enunciado é substituído pela descrição textual e a questão fica com `tem_imagem: true`;
+- a questão anulada de cada ano é descartada.
+
+Se você usar esse dataset em pesquisa, cite os trabalhos dos autores:
+
+```bibtex
+@misc{pires2023evaluating,
+  title={Evaluating GPT-4's Vision Capabilities on Brazilian University Admission Exams},
+  author={Ramon Pires and Thales Sales Almeida and Hugo Abonizio and Rodrigo Nogueira},
+  year={2023}, eprint={2311.14169}, archivePrefix={arXiv}, primaryClass={cs.CL}
+}
+
+@misc{nunes2023evaluating,
+  title={Evaluating GPT-3.5 and GPT-4 Models on Brazilian University Admission Exams},
+  author={Desnes Nunes and Ricardo Primi and Ramon Pires and Roberto Lotufo and Rodrigo Nogueira},
+  year={2023}, eprint={2303.17003}, archivePrefix={arXiv}, primaryClass={cs.CL}
+}
+```
+
+### Formato
+
+Um arquivo JSONL com uma questão por linha. Dá para usar qualquer dataset que siga este formato:
+
+```json
+{
+  "id": "2024-045",
+  "area": "linguagens",
+  "enunciado": "texto completo, incluindo textos-base",
+  "alternativas": {"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."},
+  "gabarito": "C",
+  "requer_imagem": false,
+  "tem_imagem": false,
+  "fonte": "maritaca-ai/enem"
+}
+```
+
+- `area` é uma de `linguagens`, `humanas`, `natureza` ou `matematica`.
+- `requer_imagem: true` marca questões que não podem ser respondidas só com texto; elas são ignoradas.
+- `tem_imagem: true` marca questões cuja figura foi substituída por descrição textual; serve para comparar o desempenho com e sem imagem.
+- `data/sample.jsonl` tem três questões fictícias, só para testar a instalação.
+- Os arquivos `data/enem*.jsonl` não são versionados; gere-os com `enembench.prepare`.
+
+## Como contribuir
+
+**Adicionar um modelo:** inclua uma entrada em `configs/models.yaml`, sem mexer no código.
+
+```yaml
+meu-modelo:
+  hf_id: organizacao/nome-no-hub
+  quant: none      # none, 8bit ou 4bit
+  chat: true       # true se o modelo tem chat template
+  group: br        # rótulo usado nos gráficos
+```
+
+Confirme com `./run.sh --listar` e rode um teste com `--dados data/sample.jsonl`.
+
+**Adicionar ou corrigir questões (por exemplo, o ENEM 2026):** siga o formato acima, confira o gabarito contra a fonte oficial e informe no pull request de onde vieram os dados.
+
+**Código:** abra uma issue descrevendo a mudança antes de um pull request grande. Mantenha os commits pequenos e com mensagem descritiva.
