@@ -112,17 +112,32 @@ Um arquivo JSONL com uma questão por linha. Dá para usar qualquer dataset que 
 
 ## Como contribuir
 
-**Adicionar um modelo:** inclua uma entrada em `configs/models.yaml`, sem mexer no código.
+**Adicionar um modelo:** os modelos ficam registrados em `configs/models.yaml`, e o programa lê esse arquivo para saber quais existem. Para incluir um novo, acrescente um bloco no fim do arquivo, sem mexer no código. Exemplo com o Gemma 2 2B:
 
 ```yaml
-meu-modelo:
-  hf_id: organizacao/nome-no-hub
-  quant: none      # none, 8bit ou 4bit
-  chat: true       # true se o modelo tem chat template
-  group: br        # rótulo usado nos gráficos
+gemma2-2b:
+  hf_id: google/gemma-2-2b-it
+  quant: 4bit
+  chat: true
+  group: multilingual
 ```
 
-Confirme com `./run.sh --listar` e rode um teste com `--dados data/sample.jsonl`.
+| Campo | Descrição |
+|---|---|
+| nome do bloco (`gemma2-2b`) | nome que você escolhe; é o valor usado em `--modelos` e o que aparece no CSV e nos gráficos |
+| `hf_id` | identificador do modelo no Hugging Face, o `organizacao/nome` da URL da página do modelo |
+| `quant` | como o modelo é carregado: `none` (tamanho normal), `8bit` ou `4bit` (comprimido, ocupa menos memória com um pouco menos de qualidade); `--quant` força um valor em todos os modelos |
+| `chat` | `true` para modelos de conversa (os "instruct"/"it"), que recebem o prompt no formato de chat do modelo; `false` para modelos base, que apenas continuam o texto |
+| `group` | rótulo livre usado nos gráficos e no filtro `--grupo` (ex.: `br`, `multilingual`) |
+
+Depois confira e teste:
+
+```bash
+./run.sh --listar                                          # o novo modelo deve aparecer na lista
+./run.sh --modelos gemma2-2b --dados data/sample.jsonl     # teste rápido com 3 questões
+```
+
+Se o `hf_id` estiver errado ou o modelo exigir aceitar uma licença no Hugging Face, o carregamento falha: o erro aparece no terminal e o benchmark segue para o próximo modelo.
 
 **Adicionar ou corrigir questões (por exemplo, o ENEM 2026):** siga o formato acima, confira o gabarito contra a fonte oficial e informe no pull request de onde vieram os dados.
 
