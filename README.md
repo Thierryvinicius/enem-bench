@@ -80,7 +80,7 @@ notebooks/     colab.ipynb
 
 Each run creates `results/<timestamp>/` with `answers.csv` (model, group, type, id, area, answer, prediction, correct, has_image, seconds per question, and the probabilities `prob_A`–`prob_E`, the softmax over the answer letters).
 
-For the analysis, run `Rscript analysis/analysis.R results/<timestamp>` (`run.sh` does it for you when R is installed). The script reads `answers.csv` and writes to the same folder:
+For the analysis, run `Rscript analysis/analysis.R results/<timestamp>` (`run.sh` does it for you when R is installed). The script reads `answers.csv` and writes to the same folder; [STATISTICS.md](STATISTICS.md) explains how to read each file:
 
 - `accuracy_overall.csv` and `accuracy_model.png`: accuracy per model with Wilson confidence intervals and the random-guess line (20%); base models are drawn lighter than instruct ones;
 - `accuracy_area.csv` and `accuracy_area.png`: accuracy per model and area;
