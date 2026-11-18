@@ -1,92 +1,96 @@
 # enem-bench
 
-Benchmark para comparar LLMs pequenos (Qwen, Tucano e outros) resolvendo as questões objetivas do ENEM. Os dados de 2022 a 2024 vêm do dataset [maritaca-ai/enem](https://huggingface.co/datasets/maritaca-ai/enem). Cada execução avalia os modelos escolhidos nas mesmas questões, salva uma linha por modelo e questão em CSV e inclui um script R (`analysis/analise.R`) que produz as tabelas, os gráficos e os testes estatísticos.
+A benchmark for comparing small LLMs (Qwen, Tucano and others) on the multiple-choice questions of ENEM, the Brazilian national high-school exam. Each run evaluates the chosen models on the same questions, writes one CSV row per model and question, and an R script (`analysis/analysis.R`) turns the CSV into tables, plots and statistical tests. The questions and the prompt sent to the models are in Portuguese.
 
-O modelo não escreve a resposta: o programa compara os logits das letras A–E no token seguinte ao prompt e escolhe a maior. Isso evita parsear texto livre e funciona bem mesmo em modelos fracos.
+A model never writes its answer. The program compares the logits of the letters A–E at the position right after the prompt and picks the highest one. This avoids parsing free text and works well even with weak models.
 
-## Como usar
+Base and instruct models are both supported: instruct models receive the prompt through their chat template, base models receive it as plain text.
 
-Requer Python 3.10+, uma GPU com CUDA (recomendado) e, opcionalmente, R para a análise.
+## Usage
+
+Requires Python 3.10+, a CUDA GPU (recommended) and, optionally, R for the analysis.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Baixe e converta o dataset (2022, 2023 e 2024):
+Download and convert the dataset (2022, 2023 and 2024):
 
 ```bash
-python -m src.dados.prepare
+python -m src.data.prepare
 ```
 
-Menu interativo (escolhe modelos, áreas, limite de questões, few-shot e dataset):
+Interactive menu (pick models, areas, question limit, few-shot and dataset):
 
 ```bash
 ./run.sh
 ```
 
-Ou direto, repassando flags ao CLI:
+Or pass flags straight to the CLI:
 
 ```bash
-./run.sh --listar
-./run.sh --modelos qwen2.5-0.5b tucano-1b1 --limite 50 --shots 3
-./run.sh --grupo br --areas matematica humanas
-./run.sh --modelos qwen2.5-0.5b --dados data/sample.jsonl
-./run.sh --modelos qwen2.5-1.5b --dados data/enem2023.jsonl data/enem2024.jsonl
+./run.sh --list
+./run.sh --models qwen2.5-0.5b tucano-1b1 --limit 50 --shots 3
+./run.sh --group br --areas mathematics humanities
+./run.sh --type base --data data/enem2023.jsonl data/enem2024.jsonl
+./run.sh --models qwen2.5-0.5b --data data/sample.jsonl
 ```
 
-| Flag | Descrição |
+| Flag | Description |
 |---|---|
-| `--listar` | lista os modelos registrados e sai |
-| `--modelos` | nomes definidos em `configs/models.yaml`, ou `all` |
-| `--grupo` | filtra modelos por grupo (ex.: `br`, `multilingual`) |
-| `--tipo` | filtra modelos por tipo: `base` ou `instruct` |
-| `--dados` | um ou mais arquivos JSONL de questões (padrão `data/enem2024.jsonl`) |
-| `--areas` | `linguagens`, `humanas`, `natureza`, `matematica` |
-| `--limite` | sorteia N questões (reprodutível com `--seed`) |
-| `--shots` | número de exemplos few-shot, retirados do próprio dataset e excluídos da avaliação |
-| `--quant` | força `none`, `8bit` ou `4bit` em todos os modelos |
-| `--seed` | semente aleatória |
-| `--saida` | pasta de resultados (padrão `results`) |
+| `--list` | list the registered models and exit |
+| `--models` | names defined in `configs/models.yaml`, or `all` |
+| `--group` | only models in a group (e.g. `br`, `multilingual`) |
+| `--type` | only models of a type: `base` or `instruct` |
+| `--data` | one or more JSONL question files (default `data/enem2024.jsonl`) |
+| `--areas` | `languages`, `humanities`, `natural_sciences`, `mathematics` |
+| `--limit` | sample N questions (reproducible with `--seed`) |
+| `--shots` | number of few-shot examples, taken from the dataset itself and excluded from the evaluation |
+| `--quant` | force `none`, `8bit` or `4bit` for all models |
+| `--seed` | random seed |
+| `--output` | results folder (default `results`) |
+| `--config` | use another configuration file |
 
-O notebook `notebooks/colab.ipynb` roda o mesmo fluxo no Google Colab.
+`notebooks/colab.ipynb` runs the same flow on Google Colab.
 
-### Configuração
+### Configuration
 
-Os valores padrão (dataset, áreas, few-shot, semente, quantização, pasta de saída, prompt de sistema e anos baixados pelo `prepare`) ficam em `configs/config.yaml`. As flags acima sobrescrevem esse arquivo, e `--config` aponta para outro arquivo de configuração.
+Default values (dataset, areas, few-shot, seed, quantization, output folder, system prompt and the years downloaded by `prepare`) live in `configs/config.yaml`. CLI flags override that file.
 
-### Estrutura
+### Project layout
 
 ```
-configs/    config.yaml (padrões) e models.yaml (registro de modelos)
-src/        cli.py, runner.py, prompts.py, config.py
-src/dados/  loader.py (carrega JSONL) e prepare.py (baixa e converte o maritaca-ai/enem)
-src/modelos/ registry.py (lê models.yaml) e hf.py (carrega e executa o modelo)
-analysis/   analise.R
+configs/       config.yaml (defaults) and models.yaml (model registry)
+src/           cli.py, runner.py, prompts.py, config.py
+src/data/      loader.py (reads JSONL) and prepare.py (downloads and converts maritaca-ai/enem)
+src/models/    registry.py (reads models.yaml) and hf.py (loads and runs a model)
+analysis/      analysis.R
+notebooks/     colab.ipynb
 ```
 
-### Saída
+### Output
 
-Cada execução cria `results/<data-hora>/` com:
+Each run creates `results/<timestamp>/` with `answers.csv` (model, group, type, id, area, answer, prediction, correct, has_image, seconds per question).
 
-- `respostas.csv`: modelo, grupo, tipo, id, área, gabarito, predição, acerto, se a questão tem imagem e tempo por questão.
-- Para a análise, rode `Rscript analysis/analise.R results/<data-hora>` (o `run.sh` faz isso sozinho se o R estiver instalado). O script lê o `respostas.csv` e escreve na mesma pasta:
-  - `acuracia_geral.csv` e `acuracia_modelo.png`: acurácia por modelo com intervalo de confiança de Wilson e a linha do acaso (20%); modelos base aparecem mais claros que os instruct;
-  - `acuracia_area.csv` e `acuracia_area.png`: acurácia por modelo e área;
-  - `acuracia_imagem.csv`: acurácia em questões com e sem imagem;
-  - `mcnemar.csv`: teste de McNemar pareado entre todos os pares de modelos, com correção de Holm.
+For the analysis, run `Rscript analysis/analysis.R results/<timestamp>` (`run.sh` does it for you when R is installed). The script reads `answers.csv` and writes to the same folder:
 
-Pacotes R necessários: `dplyr`, `ggplot2`, `readr`, `tidyr`, `scales`.
+- `accuracy_overall.csv` and `accuracy_model.png`: accuracy per model with Wilson confidence intervals and the random-guess line (20%); base models are drawn lighter than instruct ones;
+- `accuracy_area.csv` and `accuracy_area.png`: accuracy per model and area;
+- `accuracy_image.csv`: accuracy on questions with and without images;
+- `mcnemar.csv`: paired McNemar test for every pair of models, with Holm correction.
+
+R packages: `dplyr`, `ggplot2`, `readr`, `tidyr`, `scales`.
 
 ## Dataset
 
-Os dados vêm do [maritaca-ai/enem](https://huggingface.co/datasets/maritaca-ai/enem) (licença Apache-2.0), que reúne todas as questões objetivas do ENEM 2022, 2023 e 2024. Para as questões com imagem, o dataset inclui descrições em texto das figuras, extraídas do caderno de acessibilidade do ENEM, o que permite avaliar modelos só de texto. `python -m src.dados.prepare` baixa os arquivos e os converte para o formato abaixo em `data/enem<ano>.jsonl`:
+The data comes from [maritaca-ai/enem](https://huggingface.co/datasets/maritaca-ai/enem) (Apache-2.0), which contains all multiple-choice questions of ENEM 2022, 2023 and 2024. For questions with images, the dataset includes text descriptions of the figures, taken from ENEM's accessibility booklet, which makes it possible to evaluate text-only models. `python -m src.data.prepare` downloads the files and converts them to the format below, as `data/enem<year>.jsonl`:
 
-- a área é derivada do número da questão (1–45 linguagens, 46–90 humanas, 91–135 natureza, 136–180 matemática);
-- o marcador de imagem do enunciado é substituído pela descrição textual e a questão fica com `tem_imagem: true`;
-- a questão anulada de cada ano é descartada.
+- the area is derived from the question number (1–45 languages, 46–90 humanities, 91–135 natural sciences, 136–180 mathematics);
+- the image marker in the statement is replaced by the text description and the question gets `has_image: true`;
+- the annulled question of each year is dropped.
 
-Se você usar esse dataset em pesquisa, cite os trabalhos dos autores:
+If you use this dataset in research, please cite the authors' papers:
 
 ```bibtex
 @misc{pires2023evaluating,
@@ -102,60 +106,60 @@ Se você usar esse dataset em pesquisa, cite os trabalhos dos autores:
 }
 ```
 
-### Formato
+### Format
 
-Um arquivo JSONL com uma questão por linha. Dá para usar qualquer dataset que siga este formato:
+A JSONL file with one question per line. Any dataset that follows this format can be used:
 
 ```json
 {
   "id": "2024-045",
-  "area": "linguagens",
-  "enunciado": "texto completo, incluindo textos-base",
-  "alternativas": {"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."},
-  "gabarito": "C",
-  "requer_imagem": false,
-  "tem_imagem": false,
-  "fonte": "maritaca-ai/enem"
+  "area": "languages",
+  "statement": "full text, including supporting texts",
+  "choices": {"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."},
+  "answer": "C",
+  "requires_image": false,
+  "has_image": false,
+  "source": "maritaca-ai/enem"
 }
 ```
 
-- `area` é uma de `linguagens`, `humanas`, `natureza` ou `matematica`.
-- `requer_imagem: true` marca questões que não podem ser respondidas só com texto; elas são ignoradas.
-- `tem_imagem: true` marca questões cuja figura foi substituída por descrição textual; serve para comparar o desempenho com e sem imagem.
-- `data/sample.jsonl` tem três questões fictícias, só para testar a instalação.
-- Os arquivos `data/enem*.jsonl` não são versionados; gere-os com `python -m src.dados.prepare`.
+- `area` is one of `languages`, `humanities`, `natural_sciences` or `mathematics`.
+- `requires_image: true` marks questions that cannot be answered from text alone; they are skipped.
+- `has_image: true` marks questions whose figure was replaced by a text description; it is used to compare performance with and without images.
+- `data/sample.jsonl` has three fictitious questions, only to check the installation.
+- `data/enem*.jsonl` files are not versioned; generate them with `python -m src.data.prepare`.
 
-## Como contribuir
+## Contributing
 
-**Adicionar um modelo:** os modelos ficam registrados em `configs/models.yaml`, e o programa lê esse arquivo para saber quais existem. Para incluir um novo, acrescente um bloco no fim do arquivo, sem mexer no código. Exemplo com o Gemma 2 2B (versão instruct):
+**Add a model:** models are registered in `configs/models.yaml`, and the program reads that file to know which ones exist. To add one, append a block at the end of the file; no code changes are needed. Example with Gemma 2 2B (instruct version):
 
 ```yaml
 gemma2-2b:
   hf_id: google/gemma-2-2b-it
-  tipo: instruct
+  type: instruct
   quant: 4bit
   group: multilingual
 ```
 
-| Campo | Descrição |
+| Field | Description |
 |---|---|
-| nome do bloco (`gemma2-2b`) | nome que você escolhe; é o valor usado em `--modelos` e o que aparece no CSV e nos gráficos |
-| `hf_id` | identificador do modelo no Hugging Face, o `organizacao/nome` da URL da página do modelo |
-| `tipo` | `instruct` para modelos de conversa (os "instruct"/"it"), que recebem o prompt no formato de chat do modelo; `base` para modelos sem ajuste de conversa, que recebem o prompt como texto puro |
-| `quant` | como o modelo é carregado: `none` (tamanho normal), `8bit` ou `4bit` (comprimido, ocupa menos memória com um pouco menos de qualidade); `--quant` força um valor em todos os modelos |
-| `group` | rótulo livre usado nos gráficos e no filtro `--grupo` (ex.: `br`, `multilingual`) |
+| block name (`gemma2-2b`) | a name you choose; it is the value used in `--models` and what shows up in the CSV and plots |
+| `hf_id` | model identifier on Hugging Face, the `organization/name` from the model page URL |
+| `type` | `instruct` for chat models, which receive the prompt through the model's chat template; `base` for models without chat tuning, which receive the prompt as plain text |
+| `quant` | how the model is loaded: `none` (full size), `8bit` or `4bit` (compressed, uses less memory at a small quality cost); `--quant` overrides it for all models |
+| `group` | free-form label used in plots and by the `--group` filter (e.g. `br`, `multilingual`) |
 
-Os modelos Qwen e Tucano estão registrados nas duas versões, `base` (sufixo `-base`) e `instruct`, para comparar as duas abordagens.
+The Qwen and Tucano models are registered in both versions, `instruct` and `base` (names ending in `-base`), so the two approaches can be compared.
 
-Depois confira e teste:
+Then check and test it:
 
 ```bash
-./run.sh --listar                                          # o novo modelo deve aparecer na lista
-./run.sh --modelos gemma2-2b --dados data/sample.jsonl     # teste rápido com 3 questões
+./run.sh --list                                          # the new model should appear in the list
+./run.sh --models gemma2-2b --data data/sample.jsonl     # quick test with 3 questions
 ```
 
-Se o `hf_id` estiver errado ou o modelo exigir aceitar uma licença no Hugging Face, o carregamento falha: o erro aparece no terminal e o benchmark segue para o próximo modelo.
+If the `hf_id` is wrong or the model requires accepting a license on Hugging Face, loading fails: the error is printed and the benchmark moves on to the next model.
 
-**Adicionar ou corrigir questões (por exemplo, o ENEM 2026):** siga o formato acima, confira o gabarito contra a fonte oficial e informe no pull request de onde vieram os dados.
+**Add or fix questions (for example, ENEM 2026):** follow the format above, check the answer key against the official source, and say in the pull request where the data came from.
 
-**Código:** abra uma issue descrevendo a mudança antes de um pull request grande. Mantenha os commits pequenos e com mensagem descritiva.
+**Code:** open an issue describing the change before a large pull request. Keep commits small, with descriptive messages.
